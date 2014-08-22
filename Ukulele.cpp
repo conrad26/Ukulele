@@ -1,5 +1,5 @@
 /*
- * Ukulele.cpp
+ * Display_Input.cpp
  *
  * Created: 5/25/2014 5:53:44 PM
  *  Author: Tom
@@ -15,6 +15,8 @@
 #include "Goldelox_Serial_4DLib.h"
 #include "Goldelox_const4D.h"
 #include <Adafruit_NeoPixel.h>
+//#include <MsTimer2.h>
+//#include <AdaEncoder.h>
 #include <Rotary.h>
 
 #define DEBUG
@@ -22,6 +24,14 @@
 void debug();
 #endif
 
+//#define LOG_MESSAGES
+/*
+#ifdef LOG_MESSAGES
+#define HWLOGGING Serial
+#else
+#define HWLOGGING if (1) {} else Serial
+#endif
+*/
 
 void setup();
 void loop();
@@ -35,10 +45,9 @@ void theaterChase(uint32_t c, uint8_t wait);
 void theaterChaseRainbow(uint8_t wait);
 void displayChord(char* chord, uint8_t wait);
 uint32_t Wheel(byte WheelPos);
-
 ByteBuffer printBuffer(200);
 
-//encoder variables
+//setup the rotary encoder
 Rotary r = Rotary(2, 3);
 unsigned char result;
 int8_t clicks = 0;
@@ -112,14 +121,12 @@ int noteOrQuality=0;
 
 //setting up to do character displays
 void messageLoop();
-
 //this should be a complete set of a 4 row x 5 column characters, in ascii order.  That is, the first is ascii 30 ("0") and so on through all the capital letters (ascii 5A or "Z") 
 // index 0='0'; 1='1' ; 2='2' ; 3='3' ; 4='4' ; 5='5' ; 6='6' ; 7='7' ; 8='8' ; 9='9' ; 10=':' ; 11=';' ; 12='<' ; 13='=' ; 14='>'; 15='?'; 16='@'; 17='A' ; 
-long asciiFont[43] = {0x0F999F,0x06E66F,0x06924F,0x0F171F,0x099F11,0x0F8E1E,0x0F8F9F,0x0F1111,0x0F9F9F,0x0F9F11,0x066066,0x066064,0x036863,0x00f0f0,0x0c616c,0x0f9202,0x0e9e87,0x069f99,0x0e9e9e,0x0f888f,0x0e999e,0x0f8f8f,0x0f8e88,0x068b96,0x099f99,0x0f666f,0x011196,0x09aca9,0x08888f,0x09ff99,0x09dfb9,0x0F999F,0x0f9f88,0x0f99bf,0x0f9fa9,0x0f8f1f,0x0f6666,0x09999F,0x099955,0x099ff9,0x099699,0x099f1E,0x0f36cf};
-
+long asciiFont[43] = {0x069996,0x06E66F,0x06924F,0x0F171F,0x099F11,0x0F8E1E,0x0F8F9F,0x0F1111,0x0F9F9F,0x0F9F11,0x066066,0x066064,0x036863,0x00f0f0,0x0c616c,0x0f9202,0x0e9e87,0x069f99,0x0e9e9e,0x0f888f,0x0e999e,0x0f8f8f,0x0f8e88,0x068b96,0x099f99,0x0f666f,0x011196,0x09aca9,0x08888f,0x09ff99,0x09dfb9,0x069996,0x0f9f88,0x0f99bf,0x0f9fa9,0x0f8f1f,0x0f6666,0x09999F,0x099955,0x099ff9,0x099699,0x099f1E,0x0f36cf};
 //so we want to create a 12 row wide shift register  each letter will be shifted in from the left (bottom) in order.  e.g. 1,2,3 would be 0x0F66E6,0x0F4296,0x0F171F,0.  As it stands there will at best be two characters on the screen at any one time.
 //need to handle spaces in the message too.
-String message="ARCANE IDEAS ";
+String message="GO ORIOLES ";
 int RedLED = 0x7F;  //red, green, blue 
 int GreenLED = 0x30;
 int BlueLED = 0x00;
@@ -130,9 +137,6 @@ String longString;
 int bytePointer = 0;
 int messagePointer = 0;
 int outputPointer = 6; // start at the sixth byte and increment down by 6, looping as needed
-
-
-
 
 
 //___________________________________________________________
@@ -155,9 +159,6 @@ void setup() {
   //select button on rotary encoder; enable the pull-up on pin
   pinMode(setButton, INPUT);
   digitalWrite(setButton, HIGH);
-  //enable pullups on encoded lines; is this necessary? no, it's included in Rotary library
-  //  digitalWrite(2,HIGH);
-  //  digitalWrite(3,HIGH);
 
   //setup the main OLED display menu
   Display.TimeLimit4D   = 5000 ;
@@ -242,19 +243,11 @@ void loop() {
       //Serial.println("Button Press - main");
       switch (encoderPos) {  //do an action based on the selected line
         case 0:
-          //digitalWrite(ledSupplyEnablePin, 1);  //turn on the 5V rail to the LEDs
-          //delay(supplyOnDelay); //let the supply stabilize
           theaterChase(50, 100);
-          //digitalWrite(ledSupplyEnablePin, 0); //turn off the 5V rail to the LEDs
-          //delay(supplyOffDelay); //let the supply decay (may not be necessary)
           break;
 
         case 1:
-          //digitalWrite(ledSupplyEnablePin, 1);  //turn on the 5V rail to the LEDs
-          //delay(supplyOnDelay); //let the supply stabilize
           theaterChaseRainbow(50);
-          //digitalWrite(ledSupplyEnablePin, 0); //turn off the 5V rail to the LEDs
-          //delay(supplyOffDelay); //let the supply decay (may not be necessary)
           break;
 
         case 2:
@@ -268,11 +261,7 @@ void loop() {
           break;
 
         case 3:
-          //digitalWrite(ledSupplyEnablePin, 1);  //turn on the 5V rail to the LEDs
-          //delay(supplyOnDelay); //let the supply stabilize
           rainbowCycle(50);
-          //digitalWrite(ledSupplyEnablePin, 0); //turn off the 5V rail to the LEDs
-          //delay(supplyOffDelay); //let the supply decay (may not be necessary)
           break;
 
         case 4:
@@ -306,11 +295,7 @@ void loop() {
 
         case 6:
         //turn off the LEDs
-          //digitalWrite(ledSupplyEnablePin, 1);  //turn on the 5V rail to the LEDs
-          //delay(supplyOnDelay); //let the supply stabilize
           colorWipe(strip.Color(0, 0, 0), 0);
-          //digitalWrite(ledSupplyEnablePin, 0); //turn off the 5V rail to the LEDs
-          //delay(supplyOffDelay); //let the supply decay (may not be necessary)
           break;
       }
       delay(500);
@@ -379,8 +364,6 @@ void loop() {
         else {
           qualityIndex = qualityIndex + clicks;
           clicks=0;
-          //Display.txt_Height(3);
-          //Display.txt_Width(3);
           Display.txt_MoveCursor(3,4);
           Display.txt_Inverse(1);
           Display.putstr(quality[qualityIndex]);
@@ -423,20 +406,23 @@ void loop() {
         start=0;
         noteOrQuality=0;
         menuPage=0;
-        delay(500);
-      } else if (noteOrQuality && qualityIndex ==4) {
+        delay(500);       
+      } 
+      else if (noteOrQuality && qualityIndex ==4) {
         displayChord(diminishedChords[noteIndex], 10);
         start=0;
         noteOrQuality=0;
         menuPage=0;
         delay(500);
-      } else if (noteOrQuality && qualityIndex ==5) {
+      } 
+      else if (noteOrQuality && qualityIndex ==5) {
         displayChord(augmentedChords[noteIndex], 10);
         start=0;
         noteOrQuality=0;
         menuPage=0;
         delay(500);
-      } else if (noteOrQuality && qualityIndex ==6) {
+      } 
+      else if (noteOrQuality && qualityIndex ==6) {
         displayChord(sixthChords[noteIndex], 10);
         start=0;
         noteOrQuality=0;
@@ -531,10 +517,8 @@ void messageLoop() {
   int index;
   if (outputPointer == 17 || outputPointer == 5 || outputPointer == 11 ) {
     char displayChar = message.charAt(messagePointer);  //grab the first character of the message
-    //Serial.print("character");Serial.print(messagePointer+1);Serial.print(" is ");Serial.println(displayChar);
     long codedChar = asciiFont[displayChar - 48];  //displayChar should be the character in ASCII, subtracting 48 should give the index in the asciiFont array.
     if (displayChar == 32) codedChar = 0x000000;
-    //Serial.print("the corresponding code is ");Serial.println(codedChar, HEX);
     // going to waste some memory space to make this easier to conceptualize.  Each nibble will get it's own memory location; this doubles the memory requirment, but it's not much to start with for the buffer 
     //the bytePointer is there to help conceptualize, but could be based on the outputPointer; just need to handle loop around
     messageBuffer[bytePointer+5]=byte((codedChar & 0xF00000) >> 20); //mask all but the last nibble and shift it over by 20 (and so on)
@@ -543,7 +527,7 @@ void messageLoop() {
     messageBuffer[bytePointer+2]=byte((codedChar & 0x000F00) >> 8);
     messageBuffer[bytePointer+1]=byte((codedChar & 0x0000F0) >> 4);
     messageBuffer[bytePointer]  =byte((codedChar & 0x00000F));
-
+    //
     if(bytePointer ==0) { //handle the loop around on the bytePointer
       bytePointer = 12;
     }
@@ -557,13 +541,14 @@ void messageLoop() {
       messagePointer +=1; //move to the next character
     }
   }
+
   // loop to continually shift out the buffer
   // want to write out the entire strip on each pass through the loop, only the starting location changes
   
   for (int row=12;row > 0;row--) {
     index = outputPointer + (12-row);
     if (index > 17) index = outputPointer+(12-row)-18;  //loop if greater than 17
-    for (int column=4; column > 0; column--) {  
+    for (int column=4; column > 0; column--) {     
       strip.setPixelColor(uint16_t(12*(column-1)+(row-1)),uint8_t(RedLED*(bitRead(messageBuffer[index], column-1))),uint8_t(GreenLED*(bitRead(messageBuffer[index], column-1))),uint8_t(BlueLED*(bitRead(messageBuffer[index], column-1))));  //at each location light up the LED if the bit is a one  
     }
   }
@@ -622,37 +607,40 @@ void rainbowCycle(uint8_t wait) {
 }
 
 void theaterChase(uint32_t c, uint8_t wait) {
-  for (int j = 0; j < 10; j++) {
-    for (int q = 0; q < 3; q++) {
-      for (int i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, c);
-      }
-      strip.show();
+  delay(200);  //debounce the keypress
+  int j=0;
+  do {
+      for (int q = 0; q < 3; q++) {
+        for (int i = 0; i < strip.numPixels(); i = i + 3) {
+          strip.setPixelColor(i + q, c);
+        }
+        strip.show();
 
-      delay(wait);
+        delay(wait);
 
-      for (int i = 0; i < strip.numPixels(); i = i + 3) {
-        strip.setPixelColor(i + q, 0);
+        for (int i = 0; i < strip.numPixels(); i = i + 3) {
+          strip.setPixelColor(i + q, 0);
+        }
       }
-    }
+      j++;
+    } while (digitalRead(setButton));  //keep looping until you get a button press
   }
-}
 
 void theaterChaseRainbow(uint8_t wait) {
-  for (int j = 0; j < 256; j++) {
+  int j=0;
+  do {
     for (int q = 0; q < 3; q++) {
       for (int i = 0; i < strip.numPixels(); i = i + 3) {
         strip.setPixelColor(i + q, Wheel( (i + j) % 255));
-      }
+    m  }
       strip.show();
-
       delay(wait);
-
       for (int i = 0; i < strip.numPixels(); i = i + 3) {
         strip.setPixelColor(i + q, 0);
       }
     }
-  }
+    j++; 
+  } while (digitalRead(setButton));  //keep looping until you get a button press
 }
 
 uint32_t Wheel(byte WheelPos) {
